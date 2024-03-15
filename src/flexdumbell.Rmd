@@ -1,0 +1,159 @@
+---
+title: "A dynamic Dumbell plot made with flexdashboard"
+author: "SM"
+date: "`r format(Sys.time(), '%d-%m-%Y')`"
+output:
+    flexdashboard::flex_dashboard:
+        theme: default      # Available themes: default, cerulean, journal, flatly, darkly, readable, spacelab, united, cosmo, lumen, paper, sandstone, simplex, yeti.
+        orientation: columns
+        vertical_layout: fill
+runtime: shiny
+---
+
+
+```{r setup, include = FALSE}
+#---------------------------------------
+# Required libraries
+#---------------------------------------
+library(tidyverse)      # load all tidyverse stuff
+library(lubridate)      # tidy management of date and time
+
+library(flexdashboard)
+#---------------------------------------
+```
+
+```{r global, include = FALSE}
+# all expensive work goes here
+
+#---------------------------------------
+# Constants
+#---------------------------------------
+# OS-specific constants
+SEPARATOR <- .Platform$file.sep
+
+# define the current directory, i.e., the directory that contains the source files
+SRC  <- getwd()
+
+# the main project directory is the parent of the source directory
+PROJECT <- file.path(SRC, "..") %>% normalizePath()
+
+# define main directory contining all data files
+DATA <-  file.path(PROJECT, "dati")
+
+# define directories for output files (e.g., reports and plots) 
+# (they can be created later if they do not already exist)
+OUTPUT <-  file.path(PROJECT, "dati")
+
+# set timezone
+Sys.setenv(TZ = "CET")
+
+#---------------------------------------
+# Set user-defined parameters
+#---------------------------------------
+
+csv_filename <- "dati.csv"
+xls_filename <- "dati.xlsx"
+sheet_main <- "Foglio 1"
+# skip_main <- 2
+
+
+
+input_file <- file.path(DATA, csv_filename)
+df <- read.csv(input_file) %>% as_tibble()
+
+
+# fix column names
+df_names <- names(df)
+fixed_names <- df_names %>%
+    str_replace("[.]", "_")
+
+names(df) <- fixed_names
+
+# convert columns containing dates to <date> format
+df$Decorrenza_contratto <- df$Decorrenza_contratto %>% trimws() %>% lubridate::dmy()
+df$Scadenza_contratto   <- df$Scadenza_contratto   %>% trimws() %>% lubridate::dmy()
+df$Data_inizio <- df$Data_inizio %>% trimws() %>% lubridate::my()
+df$Data_fine   <- df$Data_fine   %>% trimws() %>% lubridate::my()
+df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1)
+
+# convert colum Stato to a factor
+df$Stato <- df$Stato %>% trimws() %>% as.factor()
+
+# create new column merging Cliente and Servizio
+df <- df %>% mutate(CS = paste("Cliente", Cliente, "-", "servizio", Servizio), .keep = "all") %>%
+    relocate(CS, .before = Cliente)
+#df
+
+df$CS <- df$CS %>% forcats::as_factor() %>% forcats::fct_rev()
+
+
+min_date <- min(df$Data_inizio) %>% lubridate::year() %>% paste0("01-01-", .) %>% lubridate::dmy()
+max_date <- max(df$Data_fine) %>% lubridate::year() %>% paste0("31-12-", .) %>% lubridate::dmy()
+
+
+#### TODO: add automatic refresh after a data update ####
+# rdf$data <- df
+
+# observeEvent(eventExpr = input$apply,
+#     handlerExpr = {
+#         req(input$update)
+#         df <- read_csv(input$file1$datapath)
+#         rdf$data <- df
+#     }, ignoreNULL = FALSE
+#     )
+
+```
+
+## Column {.sidebar}
+
+```{r}
+min_slider <- min_date %>% lubridate::year()
+max_slider <- max_date %>% lubridate::year()
+
+# sliderInput("min_date_adjust", label = "Date adjustment:",
+#             min = min_slider, max = max_slider, value = min_slider, step = NULL,
+#             ticks = TRUE, sep = "")
+
+dateRangeInput("daterange", label = "Date adjustment:",
+start = min_date, end = max_date, language = "it", format = "dd-mm-yyyy"
+    )
+```
+
+::: card
+Dumbbell plots (also known as Dumbbell chart or Connected dot plot) are great for displaying changes between two points in time, two conditions or differences between two groups.
+:::
+
+```{r}
+# not used yet but still nice to have
+actionButton("update", "Update plot", class = "btn btn-primary", icon("person-running"))
+
+```
+
+## Column {data-width="100%"}
+
+### Dynamic Chart
+
+```{r}
+renderPlot({
+    p <- ggplot(data = df) + 
+        geom_segment(aes(x = Data_inizio, xend = Data_fine_last_day, y = CS, yend = CS), linewidth = 0.0) +
+        geom_rect(aes(xmin = Data_inizio, xmax = Data_fine_last_day, ymin = as.numeric(CS) - 0.1, ymax = as.numeric(CS) + 0.1, fill = Stato), color = "black") +
+        geom_text(aes(x = Data_inizio, y = as.numeric(CS), label = Label), color = "black", 
+                  hjust = "left", nudge_x = 5, 
+                  vjust = "bottom", nudge_y = 0.25) +
+        scale_x_date(date_breaks = "3 months", date_labels = "%m-%y", minor_breaks = "1 month", 
+        limits = input$daterange %>% as.Date(origin = "1970-01-01") %>% lubridate::ymd(), 
+        expand = c(0, 0), position = "bottom") +
+    labs(x = "Data") + 
+    theme_minimal() + 
+    theme(axis.text = element_text(size = 14),
+          axis.title.x = element_blank(), 
+          axis.title.y = element_blank(), 
+          panel.grid.major.x = element_line(linewidth = 0.2,  color = "black"),
+          panel.grid.minor.x = element_line(linewidth = 0.1, color = "gray"),
+          legend.position = "bottom"
+          )
+    p
+})
+
+```

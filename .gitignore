@@ -1,49 +1,41 @@
-# History files
+#---------------------------------------------------#
+# .gitignore file for the flexdumbell project       #
+#                                                   #
+# Author: Sabino Maggi, CNR-IIA                     #
+# Created:       15 Mar 2024                        #
+# Last revision: 15 Mar 2024                        #
+#---------------------------------------------------#
+
+#--- Mac OS X junk
+.DS_Store
+
+#--- ignore VSCode stuff
+# **/*.code-workspace
+
+#--- History files
 .Rhistory
 .Rapp.history
 
-# Session Data files
+#--- Session Data files
 .RData
 .RDataTmp
 
-# User-specific files
-.Ruserdata
+#--- # RStudio files
+.Rproj.user
 
-# Example code in package build process
-*-Ex.R
+#--- User-specific files
+# .Ruserdata
 
-# Output files from R CMD build
-/*.tar.gz
-
-# Output files from R CMD check
-/*.Rcheck/
-
-# RStudio files
-.Rproj.user/
-
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
-
-# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
-
-# knitr and R markdown default cache directories
+#--- knitr and R markdown default cache directories
 *_cache/
 /cache/
 
-# Temporary files created by R markdown
+#--- Temporary files created by R markdown
 *.utf8.md
 *.knit.md
 
-# R Environment Variables
-.Renviron
+#--- Downloaded pdf files in data directories
+data/**/*.pdf
 
-# pkgdown site
-docs/
-
-# translation temp files
-po/*~
-
-# RStudio Connect folder
-rsconnect/
+#--- R rds files
+data/**/*.rds

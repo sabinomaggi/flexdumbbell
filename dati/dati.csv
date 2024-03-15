@@ -1,0 +1,13 @@
+"Cliente",   "Servizio", "Decorrenza contratto", "Scadenza contratto", "Note",        "Label", "Data inizio", "Data fine", "Stato"
+"A",         "1",         01-01-2008,             NA,                  "le mie note", "alpha",  02-2022,       04-2022,    PAGATA
+"A",         "1",         01-01-2009,             NA,                  "le mie note", "beta",   05-2022,       08-2022,    PAGATA
+"A",         "1",         01-05-2009,             NA,                  "le mie note", "gamma",  09-2022,       12-2023,    DA PAGARE
+"A",         "2",         01-01-2018,             31-12-2024,          "le mie note", "eta",    11-2022,       06-2023,    PROSSIMA
+"A",         "2",         01-02-2018,             31-12-2024,          "le mie note", "alpha",  08-2023,       12-2023,    PAGATA
+"B",         "1",         01-04-2020,             31-12-2024,          "le mie note", "beta",   11-2022,       06-2023,    DA PAGARE
+"B",         "2",         01-01-2021,             31-12-2024,          "le mie note", "rho",    08-2023,       12-2023,    PAGATA
+"C",         "3",         01-01-2022,             31-12-2028,          "le mie note", "tex",    01-2022,       12-2022,    PAGATA
+"C",         "3",         01-01-2022,             31-12-2028,          "le mie note", "mu",     01-2023,       10-2023,    DA PAGARE
+"C",         "3",         01-01-2022,             31-12-2028,          "le mie note", "psi",    11-2023,       06-2024,    PROSSIMA
+"C",         "22",        01-01-2022,             31-12-2028,          "le mie note", "micron", 06-2023,       12-2023,    DA PAGARE
+"D",         "44",        01-01-2023,             31-12-2030,          "le mie note", "psi",    04-2023,       05-2024,    DA PAGARE
