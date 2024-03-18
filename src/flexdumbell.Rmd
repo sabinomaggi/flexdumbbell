@@ -7,6 +7,7 @@ output:
         theme: default      # Available themes: default, cerulean, journal, flatly, darkly, readable, spacelab, united, cosmo, lumen, paper, sandstone, simplex, yeti.
         orientation: columns
         vertical_layout: fill
+        # storyboard: true
 runtime: shiny
 ---
 
@@ -46,23 +47,84 @@ OUTPUT <-  file.path(PROJECT, "dati")
 
 # set timezone
 Sys.setenv(TZ = "CET")
+#---------------------------------------
 
 #---------------------------------------
-# Set user-defined parameters
+# User-defined parameters
 #---------------------------------------
 
 csv_filename <- "dati.csv"
 xls_filename <- "dati.xlsx"
 sheet_main <- "Foglio 1"
 # skip_main <- 2
+#---------------------------------------
+
+#---------------------------------------
+# Functions
+#---------------------------------------
+
+# fix names of dataframe columns
+fix_column_names <- function(df) {
+    df_names <- names(df)
+    fixed_names <- df_names %>%
+        str_replace("[.]", "_")
+
+    names(df) <- fixed_names
+
+    return(df)
+}
+
+# fix dataframe formats
+fix_formats <- function(df) {    
+    # convert columns containing dates to <date> format
+    df$Decorrenza_contratto <- df$Decorrenza_contratto %>% lubridate::dmy()
+    df$Scadenza_contratto   <- df$Scadenza_contratto   %>% lubridate::dmy()
+    df$Data_inizio <- df$Data_inizio %>% lubridate::my()
+    df$Data_fine   <- df$Data_fine   %>% lubridate::my()
+    df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1)
+
+    # convert colum Stato to a factor
+    df$Stato <- df$Stato %>% as.factor()
+    
+    return(df)
+}
+
+# create new column merging Cliente and Servizio
+fix_columns <- function(df) {
+    df <- df %>% mutate(CS = paste("Cliente", Cliente, "-", "servizio", Servizio), .keep = "all") %>% 
+    relocate(CS, .before = Cliente)
+    df$CS <- df$CS %>% forcats::as_factor() %>% forcats::fct_rev()
+    
+    return(df)
+}
+
+#---------------------------------------
 
 
 
 input_file <- file.path(DATA, csv_filename)
-df <- read.csv(input_file) %>% as_tibble()
+df <- read.csv(input_file, , header = TRUE, strip.white = TRUE) %>% as_tibble()
+
+#fileData <- reactiveFileReader(1000, NULL, input_file, read.csv)
+fileData <- reactivePoll(1000, NULL,
+    checkFunc = function() {
+        if (file.exists(input_file))
+            file.info(input_file)$mtime[1]
+        else
+            ""
+    },
+    valueFunc = function() {
+        ddf <- read.csv(input_file, header = TRUE, strip.white = TRUE)
+        ddf <- fix_column_names(ddf)
+        ddf <- fix_formats(ddf)
+        ddf <- fix_columns(ddf)
+        print(str(ddf))
+        return(ddf)
+    }
+    )
 
 
-# fix column names
+
 df_names <- names(df)
 fixed_names <- df_names %>%
     str_replace("[.]", "_")
@@ -78,6 +140,7 @@ df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1
 
 # convert colum Stato to a factor
 df$Stato <- df$Stato %>% trimws() %>% as.factor()
+
 
 # create new column merging Cliente and Servizio
 df <- df %>% mutate(CS = paste("Cliente", Cliente, "-", "servizio", Servizio), .keep = "all") %>%
@@ -119,23 +182,24 @@ start = min_date, end = max_date, language = "it", format = "dd-mm-yyyy"
     )
 ```
 
+
 ::: card
 Dumbbell plots (also known as Dumbbell chart or Connected dot plot) are great for displaying changes between two points in time, two conditions or differences between two groups.
 :::
 
 ```{r}
 # not used yet but still nice to have
-actionButton("update", "Update plot", class = "btn btn-primary", icon("person-running"))
+## actionButton("update", "Update plot", class = "btn btn-primary", icon("person-running"))
 
 ```
 
-## Column {data-width="100%"}
+## Column {.tabset}
 
-### Dynamic Chart
+### Dynamic Chart 
 
 ```{r}
 renderPlot({
-    p <- ggplot(data = df) + 
+    p <- ggplot(data = fileData()) + 
         geom_segment(aes(x = Data_inizio, xend = Data_fine_last_day, y = CS, yend = CS), linewidth = 0.0) +
         geom_rect(aes(xmin = Data_inizio, xmax = Data_fine_last_day, ymin = as.numeric(CS) - 0.1, ymax = as.numeric(CS) + 0.1, fill = Stato), color = "black") +
         geom_text(aes(x = Data_inizio, y = as.numeric(CS), label = Label), color = "black", 
@@ -155,5 +219,18 @@ renderPlot({
           )
     p
 })
-
 ```
+
+### Data table {data-width="50%"}
+```{r}
+# renderTable({fileData()}, striped = TRUE, hover = TRUE, bordered = TRUE)
+# renderDataTable({fileData()})
+renderTable({fileData() %>% 
+        select(!c(CS, Data_fine_last_day)) %>% 
+        mutate(
+            across(matches(c("Data", "contratto")), stamp("31-12-1970")),
+            across(matches(c("Data", "contratto")), as.character)
+            )
+    }, striped = TRUE, hover = TRUE, bordered = TRUE, width = "100%",)
+```
+
