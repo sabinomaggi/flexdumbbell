@@ -9,6 +9,7 @@ output:
         vertical_layout: fill
         # storyboard: true
 runtime: shiny
+# runtime: shiny_prerendered
 ---
 
 
@@ -24,7 +25,8 @@ library(flexdashboard)
 ```
 
 ```{r global, include = FALSE}
-# all expensive work goes here
+
+# all expensive work should go here
 
 #---------------------------------------
 # Constants
@@ -49,6 +51,7 @@ OUTPUT <-  file.path(PROJECT, "dati")
 Sys.setenv(TZ = "CET")
 #---------------------------------------
 
+
 #---------------------------------------
 # User-defined parameters
 #---------------------------------------
@@ -58,6 +61,7 @@ xls_filename <- "dati.xlsx"
 sheet_main <- "Foglio 1"
 # skip_main <- 2
 #---------------------------------------
+
 
 #---------------------------------------
 # Functions
@@ -73,39 +77,45 @@ fix_column_names <- function(df) {
 
     return(df)
 }
+#---------------------------------------
 
-# fix dataframe formats
-fix_formats <- function(df) {    
-    # convert columns containing dates to <date> format
+# fix formats of dataframe columns
+fix_column_formats <- function(df) {
+    
+    # convert all columns containing dates to the proper <date> format
     df$Decorrenza_contratto <- df$Decorrenza_contratto %>% lubridate::dmy()
     df$Scadenza_contratto   <- df$Scadenza_contratto   %>% lubridate::dmy()
     df$Data_inizio <- df$Data_inizio %>% lubridate::my()
     df$Data_fine   <- df$Data_fine   %>% lubridate::my()
-    df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1)
 
-    # convert colum Stato to a factor
+    # convert colum "Stato" to the factor format
     df$Stato <- df$Stato %>% as.factor()
     
     return(df)
 }
+#---------------------------------------
 
-# create new column merging Cliente and Servizio
-fix_columns <- function(df) {
+# define new columns
+def_columns <- function(df) {
+    # define a column  by merging "Cliente" and "Servizio"
     df <- df %>% mutate(CS = paste("Cliente", Cliente, "-", "servizio", Servizio), .keep = "all") %>% 
     relocate(CS, .before = Cliente)
     df$CS <- df$CS %>% forcats::as_factor() %>% forcats::fct_rev()
-    
+
+    # define a column containg the last day of the month associated to the "Data_fine" field
+    df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1)
+
     return(df)
 }
-
 #---------------------------------------
 
 
-
+#---------------------------------------
+# Read data file and clean/fix data
+#---------------------------------------
 input_file <- file.path(DATA, csv_filename)
-df <- read.csv(input_file, , header = TRUE, strip.white = TRUE) %>% as_tibble()
+# df <- read.csv(input_file, , header = TRUE, strip.white = TRUE) %>% as_tibble()
 
-#fileData <- reactiveFileReader(1000, NULL, input_file, read.csv)
 fileData <- reactivePoll(1000, NULL,
     checkFunc = function() {
         if (file.exists(input_file))
@@ -116,75 +126,88 @@ fileData <- reactivePoll(1000, NULL,
     valueFunc = function() {
         ddf <- read.csv(input_file, header = TRUE, strip.white = TRUE)
         ddf <- fix_column_names(ddf)
-        ddf <- fix_formats(ddf)
-        ddf <- fix_columns(ddf)
-        print(str(ddf))
+        ddf <- fix_column_formats(ddf)
+        ddf <- def_columns(ddf)
+
         return(ddf)
     }
     )
 
 
+# df_names <- names(df)
+# fixed_names <- df_names %>%
+#     str_replace("[.]", "_")
+#
+# names(df) <- fixed_names
+#
+# # convert columns containing dates to <date> format
+# df$Decorrenza_contratto <- df$Decorrenza_contratto %>% trimws() %>% lubridate::dmy()
+# df$Scadenza_contratto   <- df$Scadenza_contratto   %>% trimws() %>% lubridate::dmy()
+# df$Data_inizio <- df$Data_inizio %>% trimws() %>% lubridate::my()
+# df$Data_fine   <- df$Data_fine   %>% trimws() %>% lubridate::my()
+# df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1)
+#
+# # convert colum Stato to a factor
+# df$Stato <- df$Stato %>% trimws() %>% as.factor()
+#
+#
+# # create new column merging Cliente and Servizio
+# df <- df %>% mutate(CS = paste("Cliente", Cliente, "-", "servizio", Servizio), .keep = "all") %>%
+#     relocate(CS, .before = Cliente)
+# #df
+#
+# df$CS <- df$CS %>% forcats::as_factor() %>% forcats::fct_rev()
 
-df_names <- names(df)
-fixed_names <- df_names %>%
-    str_replace("[.]", "_")
-
-names(df) <- fixed_names
-
-# convert columns containing dates to <date> format
-df$Decorrenza_contratto <- df$Decorrenza_contratto %>% trimws() %>% lubridate::dmy()
-df$Scadenza_contratto   <- df$Scadenza_contratto   %>% trimws() %>% lubridate::dmy()
-df$Data_inizio <- df$Data_inizio %>% trimws() %>% lubridate::my()
-df$Data_fine   <- df$Data_fine   %>% trimws() %>% lubridate::my()
-df$Data_fine_last_day <- lubridate::ceiling_date(df$Data_fine, "month") - days(1)
-
-# convert colum Stato to a factor
-df$Stato <- df$Stato %>% trimws() %>% as.factor()
-
-
-# create new column merging Cliente and Servizio
-df <- df %>% mutate(CS = paste("Cliente", Cliente, "-", "servizio", Servizio), .keep = "all") %>%
-    relocate(CS, .before = Cliente)
-#df
-
-df$CS <- df$CS %>% forcats::as_factor() %>% forcats::fct_rev()
-
-
-min_date <- min(df$Data_inizio) %>% lubridate::year() %>% paste0("01-01-", .) %>% lubridate::dmy()
-max_date <- max(df$Data_fine) %>% lubridate::year() %>% paste0("31-12-", .) %>% lubridate::dmy()
-
-
-#### TODO: add automatic refresh after a data update ####
-# rdf$data <- df
-
-# observeEvent(eventExpr = input$apply,
-#     handlerExpr = {
-#         req(input$update)
-#         df <- read_csv(input$file1$datapath)
-#         rdf$data <- df
-#     }, ignoreNULL = FALSE
-#     )
-
+#---------------------------------------
 ```
 
-## Column {.sidebar}
+## Input {.sidebar}
 
 ```{r}
-min_slider <- min_date %>% lubridate::year()
-max_slider <- max_date %>% lubridate::year()
+# # set range of dates to be shown in input sidebar
+# expr_min <- quote({
+#     min(fileData()$Data_inizio) %>% lubridate::year() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character()
+#     })
+# expr_max <- quote({
+#     max(fileData()$Data_fine) %>% lubridate::year() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character()
+#     })
+# min_date <- reactive(expr_min, quoted = TRUE)
+# max_date <- reactive(expr_max, quoted = TRUE)
 
-# sliderInput("min_date_adjust", label = "Date adjustment:",
-#             min = min_slider, max = max_slider, value = min_slider, step = NULL,
-#             ticks = TRUE, sep = "")
 
-dateRangeInput("daterange", label = "Date adjustment:",
-start = min_date, end = max_date, language = "it", format = "dd-mm-yyyy"
+# chaining after an arithmetic operation requires the expression to be wrapped in braces 
+start_date <- Sys.Date() %>% {lubridate::year(.) - 2} %>% as.character() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character()
+end_date <- Sys.Date() %>% {lubridate::year(.) + 1} %>% as.character() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character()
+
+
+# # set range of dates to be shown in input sidebar
+# min_date <- min(fileData()$Data_inizio) %>% lubridate::year() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character() %>% reactive()
+# max_date <- max(fileData()$Data_fine) %>% lubridate::year() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character() %>% reactive()
+#
+# # dmin <- min_date()
+# # dmax <- max_date()
+
+
+# here the isolate() function allows to use a reactive variable as a parameter
+dateRangeInput("daterange", label = "Seleziona qui la data iniziale e la data finale da visualizzare:", 
+               start = start_date, end = end_date,
+               format = "dd-mm-yyyy", language = "it", separator = " a ",
+               startview = "year"
     )
+
+# observe({
+#     dmin <- min_date()
+#     dmax <- max_date()
+#     updateDateRangeInput(session = getDefaultReactiveDomain(), "daterange", start = min_date(), end = max_date())
+# })
+
+# renderPrint(min_date())
+# renderPrint(max_date())
+
 ```
 
-
-::: card
-Dumbbell plots (also known as Dumbbell chart or Connected dot plot) are great for displaying changes between two points in time, two conditions or differences between two groups.
+::: usage
+Il grafico mostra la data iniziale e finale di ogni contratto stabilito con i clienti, indicandone anche lo stato attuale (già pagato, prossima scadenza, da pagare).
 :::
 
 ```{r}
@@ -234,3 +257,13 @@ renderTable({fileData() %>%
     }, striped = TRUE, hover = TRUE, bordered = TRUE, width = "100%",)
 ```
 
+
+### Info
+::: card
+Il diagramma detto di Dumbbell è un tipo di grafico nel quale i due punti estremi di ciascun gruppo sono collegati da linee rette. Questo grafico può essere utilizzato per visualizzare come cambia una variabile in due diversi istanti di tempo o per mostrare l'intervallo di variazione di una variabile tra diversi gruppi. 
+
+Ad esempio, può essere usato per indicare la crescita della popolazione in due anni diversi in diversi Paesi o la differenza tra i clienti attuali e potenziali di diverse aziende.
+
+In questo caso specifico, il grafico mostra la data iniziale e finale di ogni contratto stabilito con i clienti, indicando anche lo stato (già pagato, prossima scadenza, da pagare) del contratto stesso.
+
+:::
