@@ -89,7 +89,7 @@ fix_column_formats <- function(df) {
     df$Data_fine   <- df$Data_fine   %>% lubridate::my()
 
     # convert colum "Stato" to the factor format
-    df$Stato <- df$Stato %>% as.factor()
+    df$Stato <- df$Stato %>% forcats::as_factor()
     
     return(df)
 }
@@ -142,12 +142,28 @@ start_date <- Sys.Date() %>% {lubridate::year(.) - 2} %>% as.character() %>% pas
 end_date <- Sys.Date() %>% {lubridate::year(.) + 1} %>% as.character() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character()
 
 
-# here the isolate() function allows to use a reactive variable as a parameter
-dateRangeInput("daterange", label = "Selezionare la data iniziale e finale da visualizzare:", 
-               start = start_date, end = end_date,
+
+# # set range of dates to be shown in input sidebar
+# min_date <- min(fileData()$Data_inizio) %>% lubridate::year() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character() %>% reactive()
+# max_date <- max(fileData()$Data_fine) %>% lubridate::year() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character() %>% reactive()
+
+
+dateRangeInput("daterange", 
+               label = "Selezionare la data iniziale e finale da visualizzare:", 
+               # start = start_date, end = end_date,
                format = "dd-mm-yyyy", language = "it", separator = " a ",
                startview = "year"
     )
+
+observeEvent(fileData(), {
+    updateDateRangeInput(getDefaultReactiveDomain(),
+                         "daterange",
+                         start = min(fileData()$Data_inizio),
+                         end = max(fileData()$Data_fine)
+                         )
+    })
+
+
 ```
 
 ::: usage
@@ -168,6 +184,8 @@ Tutte le modifiche apportate al file dati vengono riflesse automaticamente sia n
 ### Grafico dinamico
 
 ```{r}
+
+
 renderPlot({
     p <- ggplot(data = fileData()) + 
         geom_segment(aes(x = Data_inizio, xend = Data_fine_last_day, y = CS, yend = CS), linewidth = 0.0) +
@@ -175,18 +193,18 @@ renderPlot({
         geom_text(aes(x = Data_inizio, y = as.numeric(CS), label = Label), color = "black", 
                   hjust = "left", nudge_x = 5, 
                   vjust = "bottom", nudge_y = 0.25) +
-        scale_x_date(date_breaks = "3 months", date_labels = "%m-%y", minor_breaks = "1 month", 
-        limits = input$daterange %>% as.Date(origin = "1970-01-01") %>% lubridate::ymd(), 
+        scale_x_date(date_breaks = "6 months", date_labels = "%m-%y", minor_breaks = "1 month", 
+        #limits = input$daterange %>% as.Date(origin = "1970-01-01") %>% lubridate::ymd(), 
         expand = c(0, 0), position = "bottom") +
-    labs(x = "Data") + 
-    theme_minimal() + 
-    theme(axis.text = element_text(size = 14),
-          axis.title.x = element_blank(), 
-          axis.title.y = element_blank(), 
-          panel.grid.major.x = element_line(linewidth = 0.2,  color = "black"),
-          panel.grid.minor.x = element_line(linewidth = 0.1, color = "gray"),
-          legend.position = "bottom"
-          )
+        labs(x = "Data") + 
+        theme_minimal() + 
+        theme(axis.text = element_text(size = 14), 
+              axis.title.x = element_blank(), 
+              axis.title.y = element_blank(), 
+              panel.grid.major.x = element_line(linewidth = 0.2,  color = "black"),
+              panel.grid.minor.x = element_line(linewidth = 0.1, color = "gray"),
+              legend.position = "bottom"
+              )
     p
 })
 ```
