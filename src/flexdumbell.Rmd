@@ -38,14 +38,17 @@ SEPARATOR <- .Platform$file.sep
 SRC  <- getwd()
 
 # the main project directory is the parent of the source directory
-PROJECT <- file.path(SRC, "..") %>% normalizePath()
+# PROJECT <- file.path(SRC, "..") %>% normalizePath()
+PROJECT <- file.path(SRC, ".") %>% normalizePath()
 
 # define main directory contining all data files
-DATA <-  file.path(PROJECT, "dati")
+# DATA <-  file.path(PROJECT, "dati")
+DATA <-  file.path(PROJECT, ".")
 
 # define directories for output files (e.g., reports and plots) 
 # (they can be created later if they do not already exist)
-OUTPUT <-  file.path(PROJECT, "dati")
+# OUTPUT <-  file.path(PROJECT, "dati")
+OUTPUT <-  file.path(PROJECT, ".")
 
 # set timezone
 Sys.setenv(TZ = "CET")
@@ -114,6 +117,9 @@ def_columns <- function(df) {
 # Read data file and clean/fix data
 #---------------------------------------
 input_file <- file.path(DATA, csv_filename)
+# input_file <- eventReactive(input$file, {
+#     input_file <- input$file$datapath
+# })
 
 fileData <- reactivePoll(1000, NULL,
     checkFunc = function() {
@@ -134,19 +140,22 @@ fileData <- reactivePoll(1000, NULL,
 #---------------------------------------
 ```
 
+
 ## Input {.sidebar}
 
 ```{r}
+# fileInput("file1", "Scegli il file CSV:",
+#           multiple = FALSE,
+#           accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv"),
+#           placeholder = "No file selected")
+
 # chaining after an arithmetic operation requires the expression to be wrapped in braces 
 start_date <- Sys.Date() %>% {lubridate::year(.) - 2} %>% as.character() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character()
 end_date <- Sys.Date() %>% {lubridate::year(.) + 1} %>% as.character() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character()
 
-
-
 # # set range of dates to be shown in input sidebar
 # min_date <- min(fileData()$Data_inizio) %>% lubridate::year() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character() %>% reactive()
 # max_date <- max(fileData()$Data_fine) %>% lubridate::year() %>% paste0("31-12-", .) %>% lubridate::dmy() %>% as.character() %>% reactive()
-
 
 dateRangeInput("daterange", 
                label = "Selezionare la data iniziale e finale da visualizzare:", 
@@ -155,7 +164,7 @@ dateRangeInput("daterange",
                startview = "year"
     )
 
-observeEvent(fileData(), {
+observeEvent(list(fileData()), {
     updateDateRangeInput(getDefaultReactiveDomain(),
                          "daterange",
                          start = min(fileData()$Data_inizio),
@@ -164,6 +173,10 @@ observeEvent(fileData(), {
     })
 
 
+# actionButton("update", "Aggiorna il grafico", class = "btn btn-primary", icon("person-running"))
+
+# # normally limits are based on range of dates in the data file
+# range_limits <- c(min(fileData()$Data_inizio), max(fileData()$Data_fine)) %>% reactive()
 ```
 
 ::: usage
@@ -174,8 +187,6 @@ Tutte le modifiche apportate al file dati vengono riflesse automaticamente sia n
 :::
 
 ```{r}
-# not used yet but still nice to have
-## actionButton("update", "Update plot", class = "btn btn-primary", icon("person-running"))
 ```
 
 
@@ -184,18 +195,19 @@ Tutte le modifiche apportate al file dati vengono riflesse automaticamente sia n
 ### Grafico dinamico
 
 ```{r}
-
-
 renderPlot({
+    xlimits <- input$daterange %>% as.Date(origin = "1970-01-01")
+    
     p <- ggplot(data = fileData()) + 
         geom_segment(aes(x = Data_inizio, xend = Data_fine_last_day, y = CS, yend = CS), linewidth = 0.0) +
         geom_rect(aes(xmin = Data_inizio, xmax = Data_fine_last_day, ymin = as.numeric(CS) - 0.1, ymax = as.numeric(CS) + 0.1, fill = Stato), color = "black") +
         geom_text(aes(x = Data_inizio, y = as.numeric(CS), label = Label), color = "black", 
                   hjust = "left", nudge_x = 5, 
                   vjust = "bottom", nudge_y = 0.25) +
+        coord_cartesian(xlim = xlimits, expand = TRUE, default = TRUE) +
         scale_x_date(date_breaks = "6 months", date_labels = "%m-%y", minor_breaks = "1 month", 
-        #limits = input$daterange %>% as.Date(origin = "1970-01-01") %>% lubridate::ymd(), 
-        expand = c(0, 0), position = "bottom") +
+        # limits = input$daterange %>% as.Date(origin = "1970-01-01") %>% lubridate::ymd(), 
+        expand = expansion(mult = 0.02), position = "bottom") +
         labs(x = "Data") + 
         theme_minimal() + 
         theme(axis.text = element_text(size = 14), 
@@ -228,4 +240,27 @@ Il diagramma di Dumbbell è una tipologia di grafico in cui i due punti estremi 
 Può essere impiegato, ad esempio, per mostrare la crescita della popolazione in due anni diversi in varie nazioni o per evidenziare le differenze tra clienti attuali e potenziali di un certo numero di imprese.
 
 Nel caso specifico, il grafico mostra le date di inizio e fine di ogni contratto stipulato con i clienti, indicando anche lo stato (pagato, prossima scadenza, da pagare) di ciascun contratto.
+
+Oltre che tramite RStudio, lo script può essere eseguito anche dal Terminale di macOS. In questo caso bisogna prima esguire `cd <nome directory>` per spostarsi nella directory contenete lo script `flexdumbell.Rmd` e poi eseguire il comando:
+```
+% Rscript -e "rmarkdown::run('flexdumbell.Rmd', shiny_args = list(launch.browser = TRUE))"
+```
 :::
+
+
+### DEBUG
+
+#### box1
+```{r}
+renderText(input_file)
+```
+
+#### box2
+```{r}
+renderText(input$daterange)
+```
+
+#### box3
+```{r}
+renderText(input$daterange %>% as.Date(origin = "1970-01-01") %>% lubridate::ymd() %>% as.character())
+```
