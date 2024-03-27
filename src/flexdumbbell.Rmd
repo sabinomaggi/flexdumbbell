@@ -1,5 +1,5 @@
 ---
-title: "Grafico di Dumbbell dinamico realizzato con flexdashboard"
+title: "Grafico di Dumbbell dinamico realizzato con flexdashboard - Versione per shinyapps.io"
 author: "SM"
 date: "`r format(Sys.time(), '%d-%m-%Y')`"
 output:
@@ -38,14 +38,17 @@ SEPARATOR <- .Platform$file.sep
 SRC  <- getwd()
 
 # the main project directory is the parent of the source directory
-PROJECT <- file.path(SRC, "..") %>% normalizePath()
+# PROJECT <- file.path(SRC, "..") %>% normalizePath()
+PROJECT <- file.path(SRC, ".") %>% normalizePath()
 
 # define main directory contining all data files
-DATA <-  file.path(PROJECT, "dati")
+# DATA <-  file.path(PROJECT, "dati")
+DATA <-  file.path(PROJECT, ".")
 
 # define directories for output files (e.g., reports and plots) 
 # (they can be created later if they do not already exist)
-OUTPUT <-  file.path(PROJECT, "dati")
+# OUTPUT <-  file.path(PROJECT, "dati")
+OUTPUT <-  file.path(PROJECT, ".")
 
 # set timezone
 Sys.setenv(TZ = "CET")
@@ -108,43 +111,30 @@ def_columns <- function(df) {
     return(df)
 }
 #---------------------------------------
+```
 
-
+```{r}
 #---------------------------------------
 # Read data file and clean/fix data
 #---------------------------------------
-input_file <- file.path(DATA, csv_filename)
-# input_file <- eventReactive(input$file, {
-#     input_file <- input$file$datapath
-# })
-
-fileData <- reactivePoll(1000, NULL,
-    checkFunc = function() {
-        if (file.exists(input_file))
-            file.info(input_file)$mtime[1]
-        else
-            ""
-    },
-    valueFunc = function() {
-        ddf <- read.csv(input_file, header = TRUE, strip.white = TRUE)
-        ddf <- fix_column_names(ddf)
-        ddf <- fix_column_formats(ddf)
-        ddf <- def_columns(ddf)
-
-        return(ddf)
-    }
-    )
-#---------------------------------------
+fileData <- eventReactive(input$input_file,{
+    ddf <- read.csv(input$input_file$datapath, header = TRUE, strip.white = TRUE)
+    ddf <- fix_column_names(ddf)
+    ddf <- fix_column_formats(ddf)
+    ddf <- def_columns(ddf)
+    
+})
 ```
 
 
 ## Input {.sidebar}
 
 ```{r}
-# fileInput("file1", "Scegli il file CSV:",
-#           multiple = FALSE,
-#           accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv"),
-#           placeholder = "No file selected")
+fileInput("input_file", "Scegli il file CSV:",
+          multiple = FALSE,
+          accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv"),
+          placeholder = "No file selected")
+
 
 # chaining after an arithmetic operation requires the expression to be wrapped in braces 
 start_date <- Sys.Date() %>% {lubridate::year(.) - 2} %>% as.character() %>% paste0("01-01-", .) %>% lubridate::dmy() %>% as.character()
@@ -245,11 +235,12 @@ Oltre che tramite RStudio, lo script può essere eseguito anche dal Terminale di
 :::
 
 
+
 ### DEBUG
 
 #### box1
 ```{r}
-renderText(input_file)
+renderText(input$input_file$datapath)
 ```
 
 #### box2
