@@ -1,5 +1,5 @@
 ---
-title: "Un grafico di Dumbbell dinamico realizzato con flexdashboard"
+title: "Grafico di Dumbbell dinamico realizzato con flexdashboard"
 author: "SM"
 date: "`r format(Sys.time(), '%d-%m-%Y')`"
 output:
