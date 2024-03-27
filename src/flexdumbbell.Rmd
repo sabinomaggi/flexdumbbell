@@ -39,16 +39,13 @@ SRC  <- getwd()
 
 # the main project directory is the parent of the source directory
 PROJECT <- file.path(SRC, "..") %>% normalizePath()
-# PROJECT <- file.path(SRC, ".") %>% normalizePath()
 
 # define main directory contining all data files
 DATA <-  file.path(PROJECT, "dati")
-# DATA <-  file.path(PROJECT, ".")
 
 # define directories for output files (e.g., reports and plots) 
 # (they can be created later if they do not already exist)
 OUTPUT <-  file.path(PROJECT, "dati")
-# OUTPUT <-  file.path(PROJECT, ".")
 
 # set timezone
 Sys.setenv(TZ = "CET")
