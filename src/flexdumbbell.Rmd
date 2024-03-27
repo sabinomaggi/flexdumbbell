@@ -241,7 +241,7 @@ Può essere impiegato, ad esempio, per mostrare la crescita della popolazione in
 
 Nel caso specifico, il grafico mostra le date di inizio e fine di ogni contratto stipulato con i clienti, indicando anche lo stato (pagato, prossima scadenza, da pagare) di ciascun contratto.
 
-Oltre che tramite RStudio, lo script può essere eseguito anche dal Terminale di macOS. In questo caso bisogna prima esguire `cd <nome directory>` per spostarsi nella directory contenete lo script `flexdumbell.Rmd` e poi eseguire il comando:
+Oltre che tramite RStudio, lo script può essere eseguito anche dal Terminale di macOS. In questo caso bisogna prima eseguire `cd <nome directory>` per spostarsi nella directory contenete lo script `flexdumbell.Rmd` e poi eseguire il comando:
 ```
 % Rscript -e "rmarkdown::run('flexdumbell.Rmd', shiny_args = list(launch.browser = TRUE))"
 ```
